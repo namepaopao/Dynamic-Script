@@ -101,4 +101,50 @@ AccountFormScript = {
             }
         );
     },
+
+    onOpportunitySelect: function (executionContext) {
+        'use strict';
+        try {
+            // 获取表单上下文
+            var formContext = executionContext.getFormContext();
+
+            // 获取商机子网格控件
+            var gridContext = formContext.getControl('Opportunities');
+            console.warn('gridContext', gridContext);
+
+            // 获取选中的记录
+            var selectedRows = gridContext.getGrid().getSelectedRows();
+            var totalEstimatedRevenue = 0;
+
+            // 遍历选中的记录
+            selectedRows.forEach(function (row) {
+                // 获取选中记录的实体引用
+                var entityReference = row
+                    .getData()
+                    .getEntity()
+                    .getEntityReference();
+
+                // 获取选中记录的预估收入 (estimatedvalue 是商机实体上预估收入的逻辑名称)
+                var estimatedRevenue = row
+                    .getData()
+                    .getEntity()
+                    .getAttributes()
+                    .getByName('estimatedvalue')
+                    .getValue();
+
+                // 累加预估收入
+                if (estimatedRevenue !== null) {
+                    totalEstimatedRevenue += estimatedRevenue;
+                }
+            });
+
+            // 将总的预估收入更新到 Account 表单的自定义字段
+            // "new_totalestimatedrevenue" 是一个货币类型的字段的逻辑名称，需要根据你的实际情况修改
+            formContext
+                .getAttribute('crcb0_sum')
+                .setValue(totalEstimatedRevenue);
+        } catch (e) {
+            console.log(e);
+        }
+    },
 };
