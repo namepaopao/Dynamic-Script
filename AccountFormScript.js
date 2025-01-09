@@ -41,7 +41,7 @@ AccountFormScript = {
         );
     },
 
-    // 如果 telephone1 字段为空，则设置默认值 "1234567890"
+    // 如果 new_phone_x 字段为空，则设置默认值 "1234567890"
     OnLoad: function (executionContext) {
         'use strict';
         var formContext = executionContext.getFormContext();
@@ -56,14 +56,14 @@ AccountFormScript = {
     },
 
     OnSave: function (executionContext) {
-        ('use strict');
+        'use strict';
         var formContext = executionContext.getFormContext();
         var saveEvent = executionContext.getEventArgs();
 
         // 获取 new_phone_x 字段的值
         var phoneXValue = formContext.getAttribute('telephone1').getValue();
 
-        // 2. 如果 telephone1 字段的值不为空且不以 "+86-" 开头，则添加前缀 "+86-"
+        // 2. 如果 new_phone_x 字段的值不为空且不以 "+86-" 开头，则添加前缀 "+86-"
         if (phoneXValue !== null && !phoneXValue.startsWith('+86-')) {
             formContext
                 .getAttribute('telephone1')
@@ -90,7 +90,7 @@ AccountFormScript = {
                 '。\n请确认此更改，并注意更改名称可能会影响相关的业务。\n是否继续？',
             title: '更改名字警告',
         };
-        var alertOptions = { height: 500, width: 450 };
+        var alertOptions = { height: 200, width: 450 };
         // 打开警告提示框
         Xrm.Navigation.openAlertDialog(alertStrings, alertOptions).then(
             function (success) {
@@ -102,49 +102,58 @@ AccountFormScript = {
         );
     },
 
-    onOpportunitySelect: function (executionContext) {
-        'use strict';
-        try {
-            // 获取表单上下文
-            var formContext = executionContext.getFormContext();
+    onLoad: function (executionContext) {
+        var formContext = executionContext.getFormContext();
+        console.log('formContext:', formContext);
 
-            // 获取商机子网格控件
-            var gridContext = formContext.getControl('Opportunities');
-            console.warn('gridContext', gridContext);
+        var gridContext = formContext.getControl('Opportunities');
+        console.log('gridContext:', gridContext);
+
+        if (gridContext) {
+            gridContext.addOnLoad(AccountFormScript.onOpportunitySelect);
+        } else {
+            console.log('Subgrid control not found.');
+        }
+    },
+
+    onOpportunitySelect: function (executionContext) {
+        try {
+            // 获取 formContext
+            var formContext = executionContext.getFormContext();
+            console.log('form Context: ', formContext);
+            var accountId = formContext.data.entity.getId(); // 获取当前 Account ID
+            console.log('account id', accountId);
+            // 获取子网格控件
+            var gridContext = formContext.getControl('subgrid_opportunities');
+            console.log('grid context: ', gridContext);
 
             // 获取选中的记录
             var selectedRows = gridContext.getGrid().getSelectedRows();
-            var totalEstimatedRevenue = 0;
+
+            // 初始化总和
+            var totalBudgetAmount = 0;
 
             // 遍历选中的记录
             selectedRows.forEach(function (row) {
-                // 获取选中记录的实体引用
-                var entityReference = row
-                    .getData()
-                    .getEntity()
-                    .getEntityReference();
+                var rowData = row.getData();
+                var entity = rowData.getEntity();
 
-                // 获取选中记录的预估收入 (estimatedvalue 是商机实体上预估收入的逻辑名称)
-                var estimatedRevenue = row
-                    .getData()
-                    .getEntity()
-                    .getAttributes()
-                    .getByName('estimatedvalue')
-                    .getValue();
-
-                // 累加预估收入
-                if (estimatedRevenue !== null) {
-                    totalEstimatedRevenue += estimatedRevenue;
-                }
+                // 获取 Opportunity 的预算金额 (budgetamount)
+                entity.attributes.forEach(function (attribute, index) {
+                    if (attribute.getName() === 'budgetamount') {
+                        var budgetAmount = attribute.getValue();
+                        if (budgetAmount != null) {
+                            totalBudgetAmount += budgetAmount;
+                        }
+                    }
+                });
             });
 
-            // 将总的预估收入更新到 Account 表单的自定义字段
-            // "new_totalestimatedrevenue" 是一个货币类型的字段的逻辑名称，需要根据你的实际情况修改
-            formContext
-                .getAttribute('crcb0_sum')
-                .setValue(totalEstimatedRevenue);
-        } catch (e) {
-            console.log(e);
+            // 更新 Account 的 crcb0_sum 字段
+            formContext.getAttribute('crcb0_sum').setValue(totalBudgetAmount);
+            formContext.getAttribute('crcb0_sum').setSubmitMode('always');
+        } catch (error) {
+            console.error('Error in onOpportunitySelect: ' + error.message);
         }
     },
 };
