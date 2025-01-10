@@ -41,7 +41,7 @@ AccountFormScript = {
         );
     },
 
-    // 如果 new_phone_x 字段为空，则设置默认值 "1234567890"
+    // 如果 new_phone_x 字段为空，则设置默认值 "1234567890"P
     OnLoad: function (executionContext) {
         'use strict';
         var formContext = executionContext.getFormContext();
